@@ -88,6 +88,8 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  //done by lee
+  while(1);
   return -1;
 }
 
@@ -213,8 +215,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
   struct file *file = NULL;
   off_t file_ofset;
   bool success = false;
-  int i;
+  int i,j;
 
+  char nameOfFile[100];
+  char argu[100];
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -222,7 +226,26 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  //done by lee start
+  for(i = 0; i < 100; i++){
+     nameOfFile[i] = file_name[i];
+     if(file_name[i] == ' '){
+       nameOfFile[i] = 0;
+	break;
+     }
+  }
+
+  for(j = 0; j < 100; j++){
+    argu[j] = file_name[i+j];
+    if(file_name[i+j] == 0){
+      break;
+    }
+  }  
+
+  //file = filesys_open (file_name);
+  file = filesys_open(nameOfFile);  
+//done by lee 
+// printf("\n\nfile : %s\n\n", file_name);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
@@ -304,7 +327,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
-
+  hex_dump(0, *esp, 1000, 1); //done by lee
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
 
