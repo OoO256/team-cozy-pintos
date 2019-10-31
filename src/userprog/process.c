@@ -53,7 +53,7 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-
+  printf("\n\n[debug] function start_process, file_name : %s\n", file_name);
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -65,7 +65,7 @@ start_process (void *file_name_)
   palloc_free_page (file_name);
   if (!success) 
     thread_exit ();
-
+  
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -216,9 +216,10 @@ load (const char *file_name, void (**eip) (void), void **esp)
   off_t file_ofset;
   bool success = false;
   int i,j;
-
-  char nameOfFile[100];
-  char argu[100];
+  char*sp = *(char**)esp;
+  int wordArignCnt = 0;
+  char nameOfCom[100];
+  char argu[100], pushValue = 0;
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -228,9 +229,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Open executable file. */
   //done by lee start
   for(i = 0; i < 100; i++){
-     nameOfFile[i] = file_name[i];
+     nameOfCom[i] = file_name[i];
      if(file_name[i] == ' '){
-       nameOfFile[i] = 0;
+       nameOfCom[i] = 0;
 	break;
      }
   }
@@ -243,7 +244,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   }  
 
   //file = filesys_open (file_name);
-  file = filesys_open(nameOfFile);  
+  file = filesys_open(nameOfCom);  
 //done by lee 
 // printf("\n\nfile : %s\n\n", file_name);
   if (file == NULL) 
@@ -327,10 +328,37 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
-  hex_dump(0, *esp, 1000, 1); //done by lee
+  printf("\n\n[debug] function load, nameOfCom : %s, argu : %s, esp : %p\n", nameOfCom, argu, *esp);
+  //argu push
+  for(i = 0, wordArignCnt = 0; 1; i++, wordArignCnt++){
+    pushValue = argu[i];
+    if(argu[i] == ' ') {
+      pushValue = 0;
+    }
+//    printf("a");
+    *sp = pushValue;
+    sp -= 1;
+ //   printf("b");
+    if(argu[i] == 0) break;
+  }
+
+   //printf("c");
+  //push command
+  for(i = 0; 1; i++, wordArignCnt++){
+    *--sp = argu[i];
+    if(argu[i] == 0) break;
+  }
+  //push word arign and NULL ptr
+  wordArignCnt %= 4;
+  for(i = 0; i < 4 - wordArignCnt + 4; i++){
+    *--sp = 0;
+  }
+  
+  *esp = sp; //we also need to change esp too, done by lee
+  printf("\n\n[debug] function load, esp : %p\n", *esp);
+  hex_dump(*esp, *esp, 100, 1); //done by lee
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
-
   success = true;
 
  done:
