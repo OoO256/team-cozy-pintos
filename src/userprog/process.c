@@ -18,6 +18,8 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+#include "lib/string.h"
+
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -215,11 +217,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   struct file *file = NULL;
   off_t file_ofset;
   bool success = false;
-  int i,j;
-  char*sp = *(char**)esp;
-  int wordArignCnt = 0;
-  char nameOfCom[100];
-  char argu[100], pushValue = 0;
+  int i;
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL) 
@@ -228,25 +226,32 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   //done by lee start
-  for(i = 0; i < 100; i++){
-     nameOfCom[i] = file_name[i];
-     if(file_name[i] == ' '){
-       nameOfCom[i] = 0;
-	break;
-     }
-  }
-
-  for(j = 0; j < 100; j++){
-    argu[j] = file_name[i+j];
-    if(file_name[i+j] == 0){
+  int argc;
+  char* argv[100];
+  char *next_ptr, *ret_ptr;
+  argv[0] = strtok_r(file_name, " ", &next_ptr);
+  printf("[debug] argv[0] = %s\n", argv[0]);
+  for (i = 1;; i++)
+  {
+    ret_ptr = strtok_r(NULL, " ", &next_ptr);
+    if (ret_ptr == NULL)
       break;
-    }
-  }  
+    argv[i] = ret_ptr;
+    printf("[debug] argv[%d] = %s\n", i, argv[i]);
+  }
+  
+  argc = i; // 2
+
+  int word_align = 0;
+  for (i = 0; i < argc; i++)
+  {
+    word_align += strlen(argv[i]) + 1;
+  }
+  word_align = 4 - word_align%4;
+  
 
   //file = filesys_open (file_name);
-  file = filesys_open(nameOfCom);  
-//done by lee 
-// printf("\n\nfile : %s\n\n", file_name);
+  file = filesys_open(argv[0]);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
@@ -328,33 +333,59 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp))
     goto done;
-  printf("\n\n[debug] function load, nameOfCom : %s, argu : %s, esp : %p\n", nameOfCom, argu, *esp);
-  //argu push
-  for(i = 0, wordArignCnt = 0; 1; i++, wordArignCnt++){
-    pushValue = argu[i];
-    if(argu[i] == ' ') {
-      pushValue = 0;
-    }
-//    printf("a");
-    *sp = pushValue;
-    sp -= 1;
- //   printf("b");
-    if(argu[i] == 0) break;
-  }
 
-   //printf("c");
-  //push command
-  for(i = 0; 1; i++, wordArignCnt++){
-    *--sp = argu[i];
-    if(argu[i] == 0) break;
-  }
-  //push word arign and NULL ptr
-  wordArignCnt %= 4;
-  for(i = 0; i < 4 - wordArignCnt + 4; i++){
-    *--sp = 0;
+  
+  char* sp = *esp;
+  void* call_stack = malloc(100);
+  int call_stack_end = 0;
+
+  *(int *)(call_stack + call_stack_end) = 0;
+  call_stack_end += sizeof(int);
+  // push 0
+
+  *(int *)(call_stack + call_stack_end) = argc;
+  call_stack_end += sizeof(int);
+  // push argc
+
+  *(char ***)(call_stack + call_stack_end) = argv;
+  call_stack_end += sizeof(char **);
+  // push argv
+
+  for (i = 0; i < argc; i++)
+  {
+    *(char **)(call_stack + call_stack_end) = argv[i];
+    call_stack_end += sizeof(char *);
+    // push argv
   }
   
-  *esp = sp; //we also need to change esp too, done by lee
+  *(int *)(call_stack + call_stack_end) = 0;
+  call_stack_end += sizeof(int);
+  // argv[4]
+
+  for (i = 0; i < word_align; i++)
+  {
+    *(char *)(call_stack + call_stack_end) = 0;
+    call_stack_end += sizeof(char);
+  }
+  // push word align
+
+  for (i = 0; i < argc; i++)
+  {
+    strlcpy(call_stack + call_stack_end, argv[i], strlen(argv[i])+1);
+    call_stack_end += strlen(argv[i]) + 1;
+  }
+  // push word align
+  printf("[debug] call_stack : ");
+  for(i = 0; i< call_stack_end; i++){
+    if(i % 4 == 0) printf("\n");
+    printf("%02x ", *(uint8_t*)(call_stack + i));
+  }
+
+  *esp -= call_stack_end;
+  memcpy(*esp, call_stack, call_stack_end);
+  free(call_stack);
+
+
   printf("\n\n[debug] function load, esp : %p\n", *esp);
   hex_dump(*esp, *esp, 100, 1); //done by lee
   /* Start address. */
