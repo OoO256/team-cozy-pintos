@@ -346,7 +346,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
     addr_arg[i] = sp;
   }
-  // push arg
+  // push arg string
 
   for (i = 0; i < word_align; i++)
   {
@@ -364,12 +364,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
     sp -= sizeof(char *);
     *(char **)(sp) = addr_arg[i];
     if(i == 0) addr_argv = sp;
-    // push addres of argv
+    // push addres of arg
   }
   
   sp -= sizeof(char **);
   *(char ***)(sp) = addr_argv;
-  // push argv
+  // push addres of argv
 
   sp -= sizeof(int);
   *(int *)(sp) = argc;
