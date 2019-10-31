@@ -335,55 +335,53 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
 
   
-  char* sp = *esp;
-  void* call_stack = malloc(100);
-  int call_stack_end = 0;
+  void *sp = *esp;
+  void *addr_argv;
+  void *addr_arg[100];
 
-  *(int *)(call_stack + call_stack_end) = 0;
-  call_stack_end += sizeof(int);
-  // push 0
-
-  *(int *)(call_stack + call_stack_end) = argc;
-  call_stack_end += sizeof(int);
-  // push argc
-
-  *(char ***)(call_stack + call_stack_end) = argv;
-  call_stack_end += sizeof(char **);
-  // push argv
-
-  for (i = 0; i < argc; i++)
+  for (i = argc-1; i >= 0; i--)
   {
-    *(char **)(call_stack + call_stack_end) = argv[i];
-    call_stack_end += sizeof(char *);
-    // push argv
+    sp -= strlen(argv[i]) + 1;
+    strlcpy(sp, argv[i], strlen(argv[i])+1);
+
+    addr_arg[i] = sp;
   }
-  
-  *(int *)(call_stack + call_stack_end) = 0;
-  call_stack_end += sizeof(int);
-  // argv[4]
+  // push arg
 
   for (i = 0; i < word_align; i++)
   {
-    *(char *)(call_stack + call_stack_end) = 0;
-    call_stack_end += sizeof(char);
+    sp -= sizeof(char);
+    *(char *)(sp) = 0;
   }
   // push word align
 
-  for (i = 0; i < argc; i++)
+  sp -= sizeof(int);
+  *(int *)(sp) = 0;
+  // argv[4]
+
+  for (i = argc-1; i >= 0; i--)
   {
-    strlcpy(call_stack + call_stack_end, argv[i], strlen(argv[i])+1);
-    call_stack_end += strlen(argv[i]) + 1;
+    sp -= sizeof(char *);
+    *(char **)(sp) = addr_arg[i];
+    if(i == 0) addr_argv = sp;
+    // push addres of argv
   }
-  // push word align
-  printf("[debug] call_stack : ");
-  for(i = 0; i< call_stack_end; i++){
-    if(i % 4 == 0) printf("\n");
-    printf("%02x ", *(uint8_t*)(call_stack + i));
-  }
+  
+  sp -= sizeof(char **);
+  *(char ***)(sp) = addr_argv;
+  // push argv
 
-  *esp -= call_stack_end;
-  memcpy(*esp, call_stack, call_stack_end);
-  free(call_stack);
+  sp -= sizeof(int);
+  *(int *)(sp) = argc;
+  // push argc
+
+  sp -= sizeof(int);
+  *(int *)(sp) = 0;
+  // push 0
+
+  *esp = sp;
+  //memcpy(*esp, sp, sp);
+  //free(sp);
 
 
   printf("\n\n[debug] function load, esp : %p\n", *esp);
