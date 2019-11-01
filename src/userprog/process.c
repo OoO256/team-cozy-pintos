@@ -43,7 +43,7 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+    palloc_free_page (fn_copy);
   return tid;
 }
 
@@ -55,7 +55,7 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
-  printf("\n\n[debug] function start_process, file_name : %s\n", file_name);
+  //printf("\n\n[debug] function start_process, file_name : %s\n", file_name);
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -87,12 +87,73 @@ start_process (void *file_name_)
 
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
+
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
   //done by lee
-  while(1);
+
+  struct list_elem *e;
+  struct thread* t = NULL;
+
+  for (e = list_begin(&(thread_current()->child_list));
+    e != list_end(&(thread_current()->child_list)); e = list_next(e))
+  {
+    t = list_entry (e, struct thread, allelem);
+    if (t->tid == child_tid){
+      break;
+    }
+  }
+
+  if (t == NULL){
+    return -1;
+  }
+  
+  if (list_empty(&(thread_current()->child_list))){
+    return 0;
+  }
+
+  if (t->status == THREAD_DYING)
+  {
+    return 0;
+  }
+  else{
+    int i = 200000;
+    while (i--)
+      printf("%c\b", thread_current()->name[0]);
+    //thread_yield();
+
+    
+    // we need semaphore
+    // TODO : learn semaphore
+  }
+  
+
+
+/*
+  struct thread *cur = thread_current(), *child;
+  struct list_elem *e;
+
+back:
+  for (e = list_begin(&(cur->child_list));
+    e != list_end(&(cur->child_list)); e = list_next(e))
+  {
+    child = list_entry (e, struct thread, child_elem);
+    //printf("[debug] cur : %s, child : %s\n", cur->name, child->name);
+
+    if(child->tid == child_tid && child->status != THREAD_DYING){
+      goto back;
+    }
+    else if (child->tid == child_tid && child->status == THREAD_DYING){
+      return 0;
+    }
+  }
+
+  if (e == list_end(&(cur->child_list))){
+    return -1;
+  }
   return -1;
+*/
 }
 
 /* Free the current process's resources. */
@@ -237,7 +298,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     if (ret_ptr == NULL)
       break;
     argv[i] = ret_ptr;
-    printf("[debug] argv[%d] = %s\n", i, argv[i]);
+    //printf("[debug] argv[%d] = %s\n", i, argv[i]);
   }
   
   argc = i; // 2
@@ -334,7 +395,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (!setup_stack (esp))
     goto done;
 
-  
   void *sp = *esp;
   void *addr_argv;
   void *addr_arg[100];
@@ -343,7 +403,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
   {
     sp -= strlen(argv[i]) + 1;
     strlcpy(sp, argv[i], strlen(argv[i])+1);
-
     addr_arg[i] = sp;
   }
   // push arg string
@@ -384,8 +443,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   //free(sp);
 
 
-  printf("\n\n[debug] function load, esp : %p\n", *esp);
-  hex_dump(*esp, *esp, 100, 1); //done by lee
+  printf("\n\n[debug] function load, hex_dump : \n");
+  hex_dump(*esp - 50, *esp - 50, 150, 1); //done by lee
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
   success = true;
