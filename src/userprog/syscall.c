@@ -22,15 +22,7 @@ void exit (int status) {
   thread_exit ();
 }
 
-int write (int fd, const void *buffer, unsigned size){
-  printf("[debug] write : fd %d buf %p size %d\n", fd, buffer, (int)size);
-  char *bufPtr = buffer;
-  printf("[debug] write : contents of buf -> ");
-  int i;  
-  for(i = 0; i < 100; i++){
-    printf("%c ", bufPtr[i]);
-  }
-  printf("\n");
+int write (int fd, void *buffer, unsigned size){
   if (fd == 1) {
     putbuf(buffer, size);
     return size;
@@ -62,18 +54,26 @@ syscall_init (void)
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
-int cache[1000];
 int fibonacci(int n){
   printf("[debug] fibonacci n : %d\n", n);
 
-  
-  int  i;
-  cache[0] = 0;
-  cache[1] = 1;
-  for(i = 2; i <= n; i++){
-    cache[n] = cache[n-1] + cache[n-2];
+  int a = 1, b = 1, c = 0; // an, an-1, an-2;
+  if (n == 0)
+    return c;
+
+  if (n == 1)
+    return b;
+
+  int temp;
+  n -= 2;
+  while (n--)
+  {
+    temp = a + b;
+    c = b;
+    b = a;
+    a = temp;
   }
-  return cache[n];
+  return a;
 }
 
 int sum(int arg0, int arg1, int arg2, int arg3){
@@ -90,7 +90,6 @@ syscall_handler (struct intr_frame *f UNUSED)
   int num_system_call = *(int *)(f->esp);
   printf("[debug] in syscall handler\n");
   printf("debug num_system_call : %d\n", num_system_call);
-  printf("esp : %p\n", f->esp);
   uint8_t* espPtr = f->esp;
   int i;
   switch (num_system_call)
@@ -114,8 +113,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     break;
   case SYS_FILESIZE:
     break;
-  case SYS_READ:
-  
+  case SYS_READ:  
     f->eax = read(*(int *)(f->esp+4), *(void **)(f->esp+8), *(unsigned int *)(f->esp+12));
     break;
   case SYS_WRITE:
