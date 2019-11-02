@@ -41,10 +41,21 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+
+  char *thread_name = malloc(100);
+  int i;
+  for (i = 0; file_name[i] != ' ' && file_name[i] != '\0'; i++)
+  {
+    thread_name[i] = file_name[i];
+  }
+  thread_name[i] = '\0';
+
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (thread_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
+
+  free(thread_name);
   return tid;
 }
 
