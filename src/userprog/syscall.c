@@ -8,6 +8,8 @@
 #include "devices/input.h"
 #include "lib/kernel/stdio.h"
 #include <string.h>
+#include "userprog/process.h"
+
 static void syscall_handler (struct intr_frame *);
 
 void halt(void){
@@ -15,7 +17,10 @@ void halt(void){
 }
 
 void exit (int status) {
-  thread_exit ();
+  struct thread *cur = thread_current();
+  cur->exit_status = status;
+  printf("%s: exit(%d)\n" , cur -> name , cur->exit_status);
+  thread_exit();
 }
 
 int write (int fd, void *buffer, unsigned size){
@@ -28,8 +33,14 @@ int write (int fd, void *buffer, unsigned size){
 
 pid_t exec (const char *cmd_line) {
   pid_t pid_child = process_execute(cmd_line);
-  //wait for pid_child load
-  return pid_child;
+
+  struct thread *child = get_child_process(thread_current(), pid_child);
+  sema_down(&(thread_current()->sema_load));
+  
+  if (child->is_loaded == false)
+    return -1;
+  else
+    return pid_child;
 }
 
 int read(int fd, void*buffer, unsigned size){
@@ -42,7 +53,7 @@ int read(int fd, void*buffer, unsigned size){
 }
 
 int wait(pid_t pid){
-	return -1;
+	return process_wait(pid);
 }
 
 
@@ -99,7 +110,8 @@ syscall_handler (struct intr_frame *f UNUSED)
     exit(*(int *)(f->esp+4));
     break;
   case SYS_EXEC:
-    exec(*(char **)(f->esp+4));
+    // MUST CHECK ADDRS
+    f->eax = exec(*(char **)(f->esp+4));
     break;
   case SYS_WAIT:
     break;

@@ -19,6 +19,7 @@
 #include "threads/vaddr.h"
 
 #include "lib/string.h"
+#include "threads/synch.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -63,10 +64,16 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+  sema_up(&(thread_current()->parent->sema_load));
+
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success) {
+    thread_current()->is_loaded = true;
     thread_exit ();
+  }
+
+  thread_current()->is_loaded = false;
   
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -106,6 +113,18 @@ struct thread* get_child_process (struct thread* p, int pid){
 void remove_child_process(struct thread* cp){
   //remove child elem from child list
   list_remove(&(cp->child_elem));
+
+  // delete child
+#ifdef USERPROG
+  uint32_t *pd;
+  pd = cp->pagedir;
+  if (pd != NULL) 
+    {
+      cp->pagedir = NULL;
+      pagedir_activate (NULL);
+      pagedir_destroy (pd);
+    }
+#endif
 }
 
 int
@@ -114,29 +133,26 @@ process_wait (tid_t child_tid)
   //done by lee
 
   struct list_elem *e;
-  struct thread*t = NULL;
+  struct thread *child = NULL;
 
   for (e = list_begin(&(thread_current()->child_list));
             e != list_end(&(thread_current()->child_list));
                   e = list_next(e))
   {
     //t = list_entry (e, struct thread, allelem);
-    t = list_entry (e, struct thread, child_elem);
     //printf("[debug] curr tid : %d child tid %d\n", t->tid, child_tid);
-    if (t->tid == child_tid){
-      break;
+    if (list_entry (e, struct thread, child_elem)->tid == child_tid){
+      child = list_entry (e, struct thread, child_elem);
     }
   }
 
-  if (t == NULL || e == list_end(&(thread_current()->child_list))){
+  if (child == NULL){
     return -1;
   }
   
-  if (list_empty(&(thread_current()->child_list))){
-    return 0;
-  }
-  while(1);
-  return -1;
+  sema_down(&(thread_current()->sema_exit));
+
+  return child->exit_status;
 }
 
 /* Free the current process's resources. */
@@ -148,7 +164,6 @@ process_exit (void)
   //printf("[debug] process_exit -> exit code : %d\n", cur->exit_status);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
-  printf("%s: exit(%d)\n", cur->name, cur->exit_status);
   pd = cur->pagedir;
   if (pd != NULL) 
     {
