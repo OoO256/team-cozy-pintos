@@ -46,14 +46,15 @@ pid_t exec (const char *cmd_line) {
 int read(int fd, void*buffer, unsigned size){
 	int i = -1;
 	if(fd == 0){
-		char*bufPtr = buffer;
+		char *bufPtr = buffer;
 		for(i = 0; i < size && bufPtr[i] != 0; i++);
 	}
 	return i;
 }
 
 int wait(pid_t pid){
-	return process_wait(pid);
+  int ret = process_wait(pid);
+	return ret;
 }
 
 
@@ -114,6 +115,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     f->eax = exec(*(char **)(f->esp+4));
     break;
   case SYS_WAIT:
+    f->eax = wait(*(int *)(f->esp+4));
     break;
   case SYS_CREATE:
     break;

@@ -313,9 +313,9 @@ thread_exit (void)
 
   struct thread *t = thread_current();
   t->did_exit = true;
-  sema_up(&(t->sema_exit));
-
   thread_current ()->status = THREAD_DYING;
+  sema_up(&(t->sema_exit));
+  
   schedule ();
   NOT_REACHED ();
 }

@@ -165,8 +165,9 @@ process_wait (tid_t child_tid)
     // 아직 살아있음 -> 죽을때까지 ㄱㄷ
     sema_down (&(child->sema_exit));
   }
+  int child_exit_status = child->exit_status;
   remove_child_process(child);
-  return child->exit_status;
+  return child_exit_status;
 }
 
 /* Free the current process's resources. */
