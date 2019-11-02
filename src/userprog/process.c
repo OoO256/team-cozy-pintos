@@ -88,72 +88,60 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 
+
+struct thread*get_child_process (struct list child_list, int tid){
+  
+  struct list_elem*curr = list_begin(&child_list); 
+  for(;!list_end(curr); curr = list_next(curr)){
+    struct thread*tmp = list_entry(curr, struct thread, thread_elem);
+    if(tmp->tid == tid) return tmp;
+  }
+  return NULL;
+}
+
+void remove_child_process(struct thread*cp){
+  //remove child elem from child list
+  list_remove(&(cp->thread_elem));
+}
+
 int
 process_wait (tid_t child_tid) 
 {
   //done by lee
 
   struct list_elem *e;
-  struct thread* t = NULL;
+  struct thread*t = NULL;
 
   for (e = list_begin(&(thread_current()->child_list));
-    e != list_end(&(thread_current()->child_list)); e = list_next(e))
+            e != list_end(&(thread_current()->child_list));
+                  e = list_next(e))
   {
-    t = list_entry (e, struct thread, allelem);
+    //t = list_entry (e, struct thread, allelem);
+    t = list_entry (e, struct thread, thread_elem);
+    //printf("[debug] curr tid : %d child tid %d\n", t->tid, child_tid);
     if (t->tid == child_tid){
       break;
     }
   }
 
-  if (t == NULL){
+  if (t == NULL || e == list_end(&(thread_current()->child_list))){
     return -1;
   }
   
   if (list_empty(&(thread_current()->child_list))){
     return 0;
   }
-
-  if (t->status == THREAD_DYING)
-  {
-    return 0;
+  while(1){
+    if(t->is_running == 0) break;
+   // printf("[debug] Loop for thread yield\n");
+    thread_yield();
   }
-  else{
-    int i = 200000;
-    while (i--)
-      printf("%c\b", thread_current()->name[0]);
-    //thread_yield();
-
-    
-    // we need semaphore
-    // TODO : learn semaphore
-  }
-  
-
-
-/*
-  struct thread *cur = thread_current(), *child;
-  struct list_elem *e;
-
-back:
-  for (e = list_begin(&(cur->child_list));
-    e != list_end(&(cur->child_list)); e = list_next(e))
-  {
-    child = list_entry (e, struct thread, child_elem);
-    //printf("[debug] cur : %s, child : %s\n", cur->name, child->name);
-
-    if(child->tid == child_tid && child->status != THREAD_DYING){
-      goto back;
-    }
-    else if (child->tid == child_tid && child->status == THREAD_DYING){
-      return 0;
-    }
-  }
-
-  if (e == list_end(&(cur->child_list))){
-    return -1;
-  }
-  return -1;
-*/
+  int exit_code = t->exit_status;
+  printf("")
+  t->thread_good_exit = 1;
+  //printf("[debug] wait -> exit code : %d\n", exit_code);
+  remove_child_process(t);
+  return exit_code;
 }
 
 /* Free the current process's resources. */
@@ -162,9 +150,10 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
+  //printf("[debug] process_exit -> exit code : %d\n", cur->exit_status);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
+  printf("%s: exit(%d)\n", cur->name, cur->exit_status);
   pd = cur->pagedir;
   if (pd != NULL) 
     {
@@ -291,7 +280,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   char* argv[100];
   char *next_ptr, *ret_ptr;
   argv[0] = strtok_r(file_name, " ", &next_ptr);
-  printf("[debug] argv[0] = %s\n", argv[0]);
+  //printf("[debug] argv[0] = %s\n", argv[0]);
   for (i = 1;; i++)
   {
     ret_ptr = strtok_r(NULL, " ", &next_ptr);
@@ -443,8 +432,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   //free(sp);
 
 
-  printf("\n\n[debug] function load, hex_dump : \n");
-  hex_dump(*esp - 50, *esp - 50, 150, 1); //done by lee
+  //printf("\n\n[debug] function load, hex_dump : \n");
+  //hex_dump(*esp - 50, *esp - 50, 150, 1); //done by lee
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
   success = true;

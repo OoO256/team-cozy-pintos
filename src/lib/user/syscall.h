@@ -29,11 +29,12 @@ bool remove (const char *file);
 int open (const char *file);
 int filesize (int fd);
 int read (int fd, void *buffer, unsigned length);
-int write (int fd, const void *buffer, unsigned length);
+int write (int fd, void *buffer, unsigned length);
 void seek (int fd, unsigned position);
 unsigned tell (int fd);
 void close (int fd);
-
+int fibonacci(int n);
+int sum(int , int , int , int);
 /* Project 3 and optionally project 4. */
 mapid_t mmap (int fd, void *addr);
 void munmap (mapid_t);

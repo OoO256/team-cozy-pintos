@@ -15,10 +15,14 @@ void halt(void){
 }
 
 void exit (int status) {
-#ifdef USERPROG
-  struct thread *cur = thread_current ();
-  printf ("%s: exit(%d)\n", cur->name, status);
-#endif
+  thread_current()->exit_status = status;
+  thread_current()->is_running = 0;
+ // while(1){
+  //  if(thread_current()->thread_good_exit == 1) break;
+    thread_yield();
+  //}
+  
+  //printf("[debug] exit -> exit code : %d\n", status);
   thread_exit ();
 }
 
@@ -55,7 +59,7 @@ syscall_init (void)
 }
 
 int fibonacci(int n){
-  printf("[debug] fibonacci n : %d\n", n);
+  //printf("[debug] fibonacci n : %d\n", n);
 
   int a = 1, b = 1, c = 0; // an, an-1, an-2;
   if (n == 0)
@@ -77,7 +81,7 @@ int fibonacci(int n){
 }
 
 int sum(int arg0, int arg1, int arg2, int arg3){
-  printf("[debug] sum argus : %d %d %d %d\n", arg0, arg1, arg2, arg3);
+  //printf("[debug] sum argus : %d %d %d %d\n", arg0, arg1, arg2, arg3);
   int SUM = arg0 + arg1 + arg2 + arg3;
   return SUM;
 }
@@ -88,8 +92,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   //printf ("system call!\n");
   
   int num_system_call = *(int *)(f->esp);
-  printf("[debug] in syscall handler\n");
-  printf("debug num_system_call : %d\n", num_system_call);
+  //printf("[debug] in syscall handler\n");
+  //printf("debug num_system_call : %d\n", num_system_call);
   uint8_t* espPtr = f->esp;
   int i;
   switch (num_system_call)

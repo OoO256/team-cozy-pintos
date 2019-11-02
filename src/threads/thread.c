@@ -67,7 +67,7 @@ static struct thread *next_thread_to_run (void);
 static void init_thread (struct thread *, const char *name, int priority);
 static bool is_thread (struct thread *) UNUSED;
 static void *alloc_frame (struct thread *, size_t size);
-static void schedule (void);
+void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
@@ -98,6 +98,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  initial_thread->exit_status = -1;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -183,6 +184,19 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+  
+#ifdef USERPROG
+  if(thread_current() != NULL){
+    //printf("[debug] thread %s created, parents is %s\n", t->name, thread_current()->name);
+    list_push_back(&(thread_current()->child_list), &(t->thread_elem));
+    t->parent = &(thread_current()->thread_elem); 
+    t->is_running = 1;
+    t->thread_good_exit = 0;
+  }
+  else{
+    //printf("[debug] init %s and no current thread\n", t->name);
+  }
+#endif
 
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 
@@ -470,6 +484,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
   list_push_back (&all_list, &t->allelem);
+
+  //printf("[debug] thread %s inited\n", t->name);
+  list_init(&(t->child_list));
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -552,7 +569,7 @@ thread_schedule_tail (struct thread *prev)
 
    It's not safe to call printf() until thread_schedule_tail()
    has completed. */
-static void
+void
 schedule (void) 
 {
   struct thread *cur = running_thread ();

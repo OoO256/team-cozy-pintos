@@ -93,6 +93,16 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    struct list child_list;
+    struct list_elem thread_elem;
+    struct list_elem*parent;
+    int exit_status;
+    int is_running; //0 -> exit, 1 -> running
+    int thread_good_exit; //thread가 종료 되었는지 확인:
+    //워스트케이스 막으려고 process wait -> 시스콜에서의 exit -> 다른쓰레드 -> 다시 exit
+    //그러면 쓰레드가 없어진후라 is_running이 쓰레기값됨
+
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -138,4 +148,5 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+void schedule (void);
 #endif /* threads/thread.h */
