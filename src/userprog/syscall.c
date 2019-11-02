@@ -19,7 +19,7 @@ void halt(void){
 void exit (int status) {
   struct thread *cur = thread_current();
   cur->exit_status = status;
-  printf("%s: exit(%d)\n" , cur -> name , cur->exit_status);
+  printf("%s: exit(%d)\n", cur -> name, cur->exit_status);
   thread_exit();
 }
 
@@ -35,7 +35,7 @@ pid_t exec (const char *cmd_line) {
   pid_t pid_child = process_execute(cmd_line);
 
   struct thread *child = get_child_process(thread_current(), pid_child);
-  sema_down(&(thread_current()->sema_load));
+  sema_down(&(child->sema_load));
   
   if (child->is_loaded == false)
     return -1;

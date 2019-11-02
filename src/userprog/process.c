@@ -64,16 +64,16 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
-  sema_up(&(thread_current()->parent->sema_load));
+  sema_up(&(thread_current()->sema_load));
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) {
-    thread_current()->is_loaded = true;
+    thread_current()->is_loaded = false;
     thread_exit ();
   }
 
-  thread_current()->is_loaded = false;
+  thread_current()->is_loaded = true;
   
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -149,9 +149,12 @@ process_wait (tid_t child_tid)
   if (child == NULL){
     return -1;
   }
-  
-  sema_down(&(thread_current()->sema_exit));
 
+  if (child->status != THREAD_DYING){
+    // 아직 살아있음 -> 죽을때까지 ㄱㄷ
+    sema_down (&(child->sema_exit));
+  }
+  remove_child_process(child);
   return child->exit_status;
 }
 
