@@ -185,18 +185,15 @@ thread_create (const char *name, int priority,
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
   
-#ifdef USERPROG
-  if(thread_current() != NULL){
-    //printf("[debug] thread %s created, parents is %s\n", t->name, thread_current()->name);
-    list_push_back(&(thread_current()->child_list), &(t->thread_elem));
-    t->parent = &(thread_current()->thread_elem); 
-    t->is_running = 1;
-    t->thread_good_exit = 0;
+  t->parent = thread_current();
+  t->is_loaded = false;
+  t->did_exit = false;
+  sema_init(&(t->sema_exit), 0);
+  sema_init(&(t->sema_load), 0);
+  if (t->parent != NULL){
+    list_push_back(&(t->parent->child_list), &(t->child_elem));
   }
-  else{
-    //printf("[debug] init %s and no current thread\n", t->name);
-  }
-#endif
+
 
   /* Prepare thread for first run by initializing its stack.
      Do this atomically so intermediate values for the 'stack' 

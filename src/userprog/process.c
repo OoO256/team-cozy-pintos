@@ -89,19 +89,23 @@ start_process (void *file_name_)
    does nothing. */
 
 
-struct thread*get_child_process (struct list child_list, int tid){
+struct thread* get_child_process (struct thread* p, int pid){
   
-  struct list_elem*curr = list_begin(&child_list); 
-  for(;!list_end(curr); curr = list_next(curr)){
-    struct thread*tmp = list_entry(curr, struct thread, thread_elem);
-    if(tmp->tid == tid) return tmp;
+  struct list_elem* e; 
+
+  for(e = list_begin(&(p->child_list)) ;
+    e != list_end(&(p->child_list)); e = list_next(e)){
+      
+    if(list_entry(e, struct thread, child_elem)->tid == pid){
+      return list_entry(e, struct thread, child_elem);
+    }
   }
   return NULL;
 }
 
-void remove_child_process(struct thread*cp){
+void remove_child_process(struct thread* cp){
   //remove child elem from child list
-  list_remove(&(cp->thread_elem));
+  list_remove(&(cp->child_elem));
 }
 
 int
@@ -117,7 +121,7 @@ process_wait (tid_t child_tid)
                   e = list_next(e))
   {
     //t = list_entry (e, struct thread, allelem);
-    t = list_entry (e, struct thread, thread_elem);
+    t = list_entry (e, struct thread, child_elem);
     //printf("[debug] curr tid : %d child tid %d\n", t->tid, child_tid);
     if (t->tid == child_tid){
       break;
@@ -131,17 +135,8 @@ process_wait (tid_t child_tid)
   if (list_empty(&(thread_current()->child_list))){
     return 0;
   }
-  while(1){
-    if(t->is_running == 0) break;
-   // printf("[debug] Loop for thread yield\n");
-    thread_yield();
-  }
-  int exit_code = t->exit_status;
-  printf("")
-  t->thread_good_exit = 1;
-  //printf("[debug] wait -> exit code : %d\n", exit_code);
-  remove_child_process(t);
-  return exit_code;
+  while(1);
+  return -1;
 }
 
 /* Free the current process's resources. */

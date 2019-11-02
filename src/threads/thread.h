@@ -5,6 +5,8 @@
 #include <list.h>
 #include <stdint.h>
 
+#include "threads/synch.h"
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -93,14 +95,16 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    
+    struct thread *parent;
     struct list child_list;
-    struct list_elem thread_elem;
-    struct list_elem*parent;
+    struct list_elem child_elem;
+
+    bool is_loaded;
+    bool did_exit;
+    struct semaphore sema_exit;
+    struct semaphore sema_load;
     int exit_status;
-    int is_running; //0 -> exit, 1 -> running
-    int thread_good_exit; //thread가 종료 되었는지 확인:
-    //워스트케이스 막으려고 process wait -> 시스콜에서의 exit -> 다른쓰레드 -> 다시 exit
-    //그러면 쓰레드가 없어진후라 is_running이 쓰레기값됨
 
 
 #ifdef USERPROG

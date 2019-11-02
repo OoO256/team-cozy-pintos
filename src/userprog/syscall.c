@@ -15,14 +15,6 @@ void halt(void){
 }
 
 void exit (int status) {
-  thread_current()->exit_status = status;
-  thread_current()->is_running = 0;
- // while(1){
-  //  if(thread_current()->thread_good_exit == 1) break;
-    thread_yield();
-  //}
-  
-  //printf("[debug] exit -> exit code : %d\n", status);
   thread_exit ();
 }
 
@@ -35,7 +27,9 @@ int write (int fd, void *buffer, unsigned size){
 }
 
 pid_t exec (const char *cmd_line) {
-  return process_execute(cmd_line);
+  pid_t pid_child = process_execute(cmd_line);
+  //wait for pid_child load
+  return pid_child;
 }
 
 int read(int fd, void*buffer, unsigned size){
