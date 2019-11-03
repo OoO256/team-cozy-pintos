@@ -1,6 +1,6 @@
 #include <syscall.h>
 #include "../syscall-nr.h"
-
+#include "threads/vaddr.h"
 /* Invokes syscall NUMBER, passing no arguments, and returns the
    return value as an `int'. */
 #define syscall0(NUMBER)                                        \
@@ -94,6 +94,9 @@ exit (int status)
 pid_t
 exec (const char *file)
 {
+  if(!is_user_vaddr(file)){
+    exit(-1);
+  }
   return (pid_t) syscall1 (SYS_EXEC, file);
 }
 
@@ -199,10 +202,12 @@ inumber (int fd)
   return syscall1 (SYS_INUMBER, fd);
 }
 
-int fibonacci(int n){
+int
+fibonacci(int n){
   return syscall1 (SYS_FIBONACCI, n);
 }
 
-int sum(int a, int b, int c, int d){
+int
+sum_of_four_int(int a, int b, int c, int d){
   return syscall4 (SYS_SUM, a, b, c, d);
 }
