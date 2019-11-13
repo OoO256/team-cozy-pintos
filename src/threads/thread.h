@@ -106,6 +106,7 @@ struct thread
     struct semaphore sema_load;
     int exit_status;
 
+    struct list file_list;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

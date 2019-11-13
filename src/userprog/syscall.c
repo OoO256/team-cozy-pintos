@@ -10,6 +10,9 @@
 #include <string.h>
 #include "userprog/process.h"
 
+#include "filesys/filesys.h"
+#include "filesys/file.h"
+
 static void syscall_handler (struct intr_frame *);
 
 void check_user_vaddr(const void *vaddr) {
@@ -63,6 +66,54 @@ int wait(pid_t pid){
 	return ret;
 }
 
+bool create(const char *file, unsigned int initial_size){
+  if (file == NULL)
+    return false;
+  
+  bool success;
+  // TODO : lock_acquire (&filesys_lock);
+  success = filesys_create (file, initial_size);
+  // lock_release (&filesys_lock);
+
+  return success;
+}
+
+bool remove(const char *file){
+  if (file == NULL)
+    return false;
+
+  bool success;
+  success = filesys_remove (file_name);
+  return success;
+}
+
+int open(const char *file){
+  if (file == NULL)
+    return -1;
+
+  struct file *f;
+  f = filesys_open (file);
+
+  if (f == NULL)
+    return -1;
+
+  if (list_size(&(f->file_list)) > 128)
+    return -1;
+
+  f->fd = list_entry(list_back(&(f->file_list)), struct file, elem)->fd + 1;
+  list_push_back(&(thread_current ()->file_list), &(f->elem));
+
+  return f->fd;
+}
+
+int filesize (int fd){
+  struct file *f;
+  struct list_elem* e;
+  for (e = list_begin(&(thread_current()->file_list));
+  e != list_end(&(thread_current()->file_list)); e = list_next(e){
+    f = list_entry()
+  }
+}
 
 void
 syscall_init (void) 
@@ -118,32 +169,40 @@ syscall_handler (struct intr_frame *f UNUSED)
     exit(*(int *)(f->esp+4));
     break;
   case SYS_EXEC:
-    // MUST CHECK ADDRS
     check_user_vaddr(f->esp+4);
     f->eax = exec(*(char **)(f->esp+4));
     break;
   case SYS_WAIT:
-  check_user_vaddr(f->esp+4);
+    check_user_vaddr(f->esp+4);
     f->eax = wait(*(int *)(f->esp+4));
     break;
   case SYS_CREATE:
+    check_user_vaddr(f->esp+4);    
+    check_user_vaddr(f->esp+8);
+    f->eax = create(*(const char **)(f->esp+4), *(unsigned int *)(f->esp+8));
     break;
   case SYS_REMOVE:
+    check_user_vaddr(f->esp+4);
+    f->eax = remove(*(const char **)(f->esp+4));
     break;
   case SYS_OPEN:
+    check_user_vaddr(f->esp+4);
+    f->eax = open(*(const char **)(f->esp+4));
     break;
   case SYS_FILESIZE:
+    check_user_vaddr(f->esp+4);
+    f->eax = filesize(*(int *)(f->esp+4));
     break;
   case SYS_READ:  
-  check_user_vaddr(f->esp+4);
-  check_user_vaddr(f->esp+8);
-  check_user_vaddr(f->esp+12);
+    check_user_vaddr(f->esp+4);
+    check_user_vaddr(f->esp+8);
+    check_user_vaddr(f->esp+12);
     f->eax = read(*(int *)(f->esp+4), *(void **)(f->esp+8), *(unsigned int *)(f->esp+12));
     break;
   case SYS_WRITE:
-  check_user_vaddr(f->esp+4);
-  check_user_vaddr(f->esp+8);
-  check_user_vaddr(f->esp+12);
+    check_user_vaddr(f->esp+4);
+    check_user_vaddr(f->esp+8);
+    check_user_vaddr(f->esp+12);
     f->eax = write(*(int *)(f->esp+4), *(void **)(f->esp+8), *(unsigned int *)(f->esp+12));
     break;
   case SYS_SEEK:
