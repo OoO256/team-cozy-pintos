@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "threads/synch.h"
+#include "filesys/file.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -106,6 +107,7 @@ struct thread
     struct semaphore sema_load;
     int exit_status;
 
+    int new_fd;
     struct list file_list;
 
 #ifdef USERPROG
@@ -154,4 +156,8 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void schedule (void);
+
+int thread_open_file(struct file *f);
+void thread_close_file(int fd);
+struct file* thread_find_file(int fd);
 #endif /* threads/thread.h */

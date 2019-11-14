@@ -11,9 +11,11 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
+#include "filesys/file.h"
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -490,6 +492,7 @@ init_thread (struct thread *t, const char *name, int priority)
   //printf("[debug] thread %s inited\n", t->name);
   list_init(&(t->child_list));
   list_init(&(t->file_list));
+  t->new_fd = 2;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -605,3 +608,41 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+int
+thread_open_file(struct file *f){
+  ASSERT(f != NULL);
+
+  struct thread *cur = thread_current();
+
+  if (list_size(&(cur->file_list)) > 128)
+    return -1;
+
+  f->fd = cur->new_fd;
+  cur->new_fd++;
+  list_push_back(&(cur->file_list), &(f->elem));
+  return f->fd;
+}
+
+void
+thread_close_file(int fd){
+  struct file *f = thread_find_file(fd);
+  ASSERT(f != NULL);
+
+  list_remove(&(f->elem));
+}
+
+struct file*
+thread_find_file(int fd){
+  struct thread *cur = thread_current();
+  struct file *f = NULL;
+
+  struct list_elem* e;
+  for (e = list_begin(&(cur->file_list));
+  e != list_end(&(cur->file_list)); e = list_next(e)){
+    f = list_entry(e, struct file, elem);
+    if (f->fd == fd)
+      return f;
+  }
+  return NULL;
+}
