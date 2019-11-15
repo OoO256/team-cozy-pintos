@@ -13,6 +13,8 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 
+#include "userprog/pagedir.h"
+
 static void syscall_handler (struct intr_frame *);
 
 void check_user_vaddr(const void *vaddr) {
@@ -42,6 +44,10 @@ int write (int fd, void *buffer, unsigned size){
   check_user_vaddr(buffer);
   if (buffer == NULL)
     exit(-1);
+#ifdef USERPROG
+  if (pagedir_get_page(thread_current()->pagedir ,buffer) == NULL)
+    exit(-1);
+#endif
   
   if(fd == 0)
   {
@@ -69,21 +75,28 @@ int write (int fd, void *buffer, unsigned size){
 }
 
 pid_t exec (const char *cmd_line) {
+  check_user_vaddr(cmd_line);
+  if (cmd_line == NULL)
+    return -1;
+
   pid_t pid_child = process_execute(cmd_line);
 
   struct thread *child = get_child_process(thread_current(), pid_child);
   sema_down(&(child->sema_load));
   
-  if (child->is_loaded == false)
-    return -1;
-  else
+  if (child->is_loaded)
     return pid_child;
+  else
+    return -1;
 }
 
 int read(int fd, void*buffer, unsigned size){
   check_user_vaddr(buffer);
-  if (buffer == NULL)
+#ifdef USERPROG
+  if (pagedir_get_page(thread_current()->pagedir ,buffer) == NULL)
     exit(-1);
+#endif
+  
 	
 	if(fd == 0){
     char *char_buf = buffer;
@@ -139,16 +152,16 @@ bool remove(const char *file){
 int open(const char *file){
   check_user_vaddr(file);
   if (file == NULL)
-    exit(-1);
+    return -1;
 
   struct file *f;
   f = filesys_open (file);
-if(!is_kernel_vaddr(f) && !is_user_vaddr(f)) exit(-1);
+  
   if (f == NULL)
-    return -1;
+      return -1;
 
-if (!strcmp(thread_current()->name, file)){
-    file_deny_write(f);
+  if (!strcmp(thread_current()->name, file)){
+      file_deny_write(f);
   }
 
   return thread_open_file(f);
@@ -228,13 +241,9 @@ int sum_of_four_int(int arg0, int arg1, int arg2, int arg3){
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  //printf ("system call!\n");
-  
+  check_user_vaddr(f->esp);
   int num_system_call = *(int *)(f->esp);
-  //printf("[debug] in syscall handler\n");
-  //printf("debug num_system_call : %d\n", num_system_call);
-  uint8_t* espPtr = f->esp;
-  int i;
+  
   switch (num_system_call)
   {
   case SYS_HALT:

@@ -142,18 +142,7 @@ process_wait (tid_t child_tid)
   //done by lee
 
   struct list_elem *e;
-  struct thread *child = NULL;
-
-  for (e = list_begin(&(thread_current()->child_list));
-            e != list_end(&(thread_current()->child_list));
-                  e = list_next(e))
-  {
-    //t = list_entry (e, struct thread, allelem);
-    //printf("[debug] curr tid : %d child tid %d\n", t->tid, child_tid);
-    if (list_entry (e, struct thread, child_elem)->tid == child_tid){
-      child = list_entry (e, struct thread, child_elem);
-    }
-  }
+  struct thread *child = get_child_process(thread_current(), child_tid);
 
   if (child == NULL){
     return -1;

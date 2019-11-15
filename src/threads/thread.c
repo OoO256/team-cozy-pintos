@@ -315,7 +315,10 @@ thread_exit (void)
 
   struct thread *t = thread_current();
   t->did_exit = true;
-  thread_current ()->status = THREAD_DYING;
+  t->status = THREAD_DYING;
+  if (t->is_loaded == false)
+    sema_up(&(t->sema_load));
+    
   sema_up(&(t->sema_exit));
   
   schedule ();
