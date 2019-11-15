@@ -21,6 +21,12 @@ void check_user_vaddr(const void *vaddr) {
   }
 }
 
+void check_kernel_vaddr(const void *vaddr) {
+  if (!is_kernel_vaddr(vaddr)) {
+    exit(-1);
+  }
+}
+
 void halt(void){
   shutdown_power_off();
 }
@@ -54,8 +60,9 @@ int write (int fd, void *buffer, unsigned size){
       exit(-1);
 
     // LOCK
+    lock_acquire(&f->lock);
     int write_cnt = file_write(f, buffer, size);
-
+    lock_release(&f->lock);
     return write_cnt;   
   }
   return -1;
@@ -91,8 +98,10 @@ int read(int fd, void*buffer, unsigned size){
   else
   {
     struct file *f = thread_find_file(fd);
+    if(f == NULL) exit(-1);
+    lock_acquire(&f->lock);
     int read_cnt = file_read(f, buffer, size);
-
+    lock_release(&f->lock);
     return read_cnt;
   }
   
@@ -134,9 +143,13 @@ int open(const char *file){
 
   struct file *f;
   f = filesys_open (file);
-
+if(!is_kernel_vaddr(f) && !is_user_vaddr(f)) exit(-1);
   if (f == NULL)
     return -1;
+
+if (!strcmp(thread_current()->name, file)){
+    file_deny_write(f);
+  }
 
   return thread_open_file(f);
 }
