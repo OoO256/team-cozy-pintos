@@ -66,25 +66,23 @@ start_process (void *file_name_)
 {
   char *file_name = file_name_;
   struct intr_frame if_;
-  bool success;
-  //printf("\n\n[debug] function start_process, file_name : %s\n", file_name);
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
 
+
+  bool success = false;
+  success = load (file_name, &if_.eip, &if_.esp);
+  thread_current()->is_loaded = success;
   sema_up(&(thread_current()->sema_load));
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) {
-    thread_current()->is_loaded = false;
     thread_exit ();
   }
-
-  thread_current()->is_loaded = true;
   
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
