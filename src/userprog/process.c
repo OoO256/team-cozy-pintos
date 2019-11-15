@@ -134,6 +134,7 @@ void remove_child_process(struct thread* cp){
       pagedir_destroy (pd);
     }
 #endif
+  palloc_free_page (cp);
 }
 
 int
@@ -163,7 +164,6 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-  //printf("[debug] process_exit -> exit code : %d\n", cur->exit_status);
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -292,14 +292,12 @@ load (const char *file_name, void (**eip) (void), void **esp)
   char* argv[100];
   char *next_ptr, *ret_ptr;
   argv[0] = strtok_r(file_name, " ", &next_ptr);
-  //printf("[debug] argv[0] = %s\n", argv[0]);
   for (i = 1;; i++)
   {
     ret_ptr = strtok_r(NULL, " ", &next_ptr);
     if (ret_ptr == NULL)
       break;
     argv[i] = ret_ptr;
-    //printf("[debug] argv[%d] = %s\n", i, argv[i]);
   }
   
   argc = i; // 2
@@ -444,7 +442,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
   //free(sp);
 
 
-  //printf("\n\n[debug] function load, hex_dump : \n");
   //hex_dump(*esp - 50, *esp - 50, 150, 1); //done by lee
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;

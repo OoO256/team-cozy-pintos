@@ -36,6 +36,7 @@ void halt(void){
 void exit (int status) {
   struct thread *cur = thread_current();
   cur->exit_status = status;
+
   printf("%s: exit(%d)\n", cur -> name, cur->exit_status);
   thread_exit();
 }
@@ -71,7 +72,6 @@ int write (int fd, void *buffer, unsigned size){
 }
 
 pid_t exec (const char *cmd_line) {
-  check_user_vaddr(cmd_line);
   if (cmd_line == NULL)
     return -1;
 
