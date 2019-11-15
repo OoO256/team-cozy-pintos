@@ -44,10 +44,6 @@ int write (int fd, void *buffer, unsigned size){
   check_user_vaddr(buffer);
   if (buffer == NULL)
     exit(-1);
-#ifdef USERPROG
-  if (pagedir_get_page(thread_current()->pagedir ,buffer) == NULL)
-    exit(-1);
-#endif
   
   if(fd == 0)
   {
@@ -92,11 +88,8 @@ pid_t exec (const char *cmd_line) {
 
 int read(int fd, void*buffer, unsigned size){
   check_user_vaddr(buffer);
-#ifdef USERPROG
-  if (pagedir_get_page(thread_current()->pagedir ,buffer) == NULL)
-    exit(-1);
-#endif
-  
+  if (buffer == NULL)
+    exit(-1);  
 	
 	if(fd == 0){
     char *char_buf = buffer;
@@ -211,8 +204,6 @@ syscall_init (void)
 }
 
 int fibonacci(int n){
-  //printf("[debug] fibonacci n : %d\n", n);
-
   int a = 1, b = 1, c = 0; // an, an-1, an-2;
   if (n == 0)
     return c;
@@ -233,7 +224,6 @@ int fibonacci(int n){
 }
 
 int sum_of_four_int(int arg0, int arg1, int arg2, int arg3){
-  //printf("[debug] sum argus : %d %d %d %d\n", arg0, arg1, arg2, arg3);
   int SUM = arg0 + arg1 + arg2 + arg3;
   return SUM;
 }
