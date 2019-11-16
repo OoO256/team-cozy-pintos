@@ -16,6 +16,7 @@
 #include "userprog/process.h"
 #endif
 #include "filesys/file.h"
+#include "userprog/syscall.h"
 
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
@@ -302,6 +303,26 @@ void
 thread_exit (void) 
 {
   ASSERT (!intr_context ());
+  struct thread *cur = thread_current();
+
+  struct file* f;
+  struct list_elem* e;
+  for (e = list_begin(&(cur->file_list)); e != list_end(&(cur->file_list)); )
+  {
+    f = list_entry(e, struct file, elem);
+    e = list_next(e);
+    close(f->fd);
+  }
+  
+  struct thread* child;
+  for (e = list_begin(&(cur->child_list)); e != list_end(&(cur->child_list));)
+  {
+    child = list_entry(e, struct thread, child_elem);
+    e = list_next(e);
+    if (child->status != THREAD_DYING)
+      wait(child->tid);
+  }
+
 
 #ifdef USERPROG
   process_exit ();
@@ -310,16 +331,22 @@ thread_exit (void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
+
+  
+
   intr_disable ();
   list_remove (&thread_current()->allelem);
 
-  struct thread *t = thread_current();
-  t->did_exit = true;
-  t->status = THREAD_DYING;
-  if (t->is_loaded == false)
-    sema_up(&(t->sema_load));
-    
-  sema_up(&(t->sema_exit));
+  
+  cur->did_exit = true;
+  cur->status = THREAD_DYING;
+  if (cur->is_loaded == false)
+    sema_up(&(cur->sema_load));    
+  sema_up(&(cur->sema_exit));
+
+
+
+
   
   schedule ();
   NOT_REACHED ();
