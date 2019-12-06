@@ -8,6 +8,10 @@
 #include "threads/synch.h"
 #include "filesys/file.h"
 
+#ifndef USERPROG
+extern bool thread_prior_aging;
+#endif
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -110,6 +114,10 @@ struct thread
     int new_fd;
     struct list file_list;
 
+    int64_t time_wake;
+    struct list_elem sleep_elem;
+    
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -160,4 +168,8 @@ void schedule (void);
 int thread_open_file(struct file *f);
 void thread_close_file(int fd);
 struct file* thread_find_file(int fd);
+
+void thread_sleep (int64_t time_wake);
+void thread_wake (int64_t now);
+
 #endif /* threads/thread.h */

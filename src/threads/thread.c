@@ -31,6 +31,9 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/* Project 3 */
+static struct list sleeping_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -56,7 +59,9 @@ static long long user_ticks;    /* # of timer ticks in user programs. */
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
 static unsigned thread_ticks;   /* # of timer ticks since last yield. */
-
+#ifndef USERPROG
+bool thread_prior_aging;
+#endif
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
@@ -73,6 +78,41 @@ static void *alloc_frame (struct thread *, size_t size);
 void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+
+bool
+less_time_wake (struct list_elem *lhs, struct list_elem *rhs, void *aux){
+  struct thread *l = list_entry (lhs, struct thread, sleep_elem);
+  struct thread *r = list_entry (rhs, struct thread, sleep_elem);
+
+  if (lhs->time_wake == rhs->time_wake)
+    return lhs->priority > rhs->priority;
+  else 
+    return lhs->time_wake < rhs->time_wake;
+}
+
+void
+thread_sleep (int64_t time_wake){
+  enum intr_level l = intr_disable();
+  struct thread *cur = thread_current();
+
+  cur->time_wake = time_wake;
+  list_insert_ordered(&sleeping_list, &cur->sleep_elem, less_time_wake, NULL);
+  // sleep cnt++
+  thread_block();
+
+  intr_set_level(l);
+}
+
+void
+thread_wake (int64_t now){
+  while (!list_empty(&sleeping_list) 
+  && list_entry(*list_front(&sleeping_list), struct thread, sleep_elem)->time_wake <= now)
+  {
+    struct thread *front = list_entry(list_pop_front(&sleeping_list), struct thread, sleep_elem);
+    thread_unblock(front);    
+  }
+}
+
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -141,6 +181,12 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+    
+#ifndef USERPROG
+  thread_wake();
+  if(thread_prior_aging == true)
+    thread_aging();
+#endif  
 }
 
 /* Prints thread statistics. */
