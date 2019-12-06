@@ -25,7 +25,7 @@
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
-static struct list ready_list;
+// static struct list ready_list;
 
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
@@ -33,7 +33,7 @@ static struct list all_list;
 
 /* Project 3 */
 static struct list sleeping_list;
-
+static struct list ready_queue[PRI_MAX - PRI_MIN + 1];
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -113,6 +113,26 @@ thread_wake (int64_t now){
   }
 }
 
+void
+thread_aging(void){
+  for (int i = PRI_MIN; i < PRI_MAX; i++)
+  {
+    struct list_elem *e;
+    for (e = list_begin(&ready_queue[i]); e != list_end(&ready_queue[i];
+    e = list_next(e)))
+    {
+      struct thread *t = list_entry (e, struct thread, allelem);
+
+      t->priority ++;
+
+      list_remove(e);
+      list_push_back(&ready_queue[i+1], e);
+    }
+    
+  }
+  
+}
+
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -133,7 +153,8 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
-  list_init (&ready_list);
+  for (i = PRI_MIN; i <= PRI_MAX; i++)
+    list_init (&ready_queue[i]);  
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -268,6 +289,7 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+  schedule();
 
   return tid;
 }
@@ -305,7 +327,13 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  
+  if (t != idle_thread)
+  {
+    list_push_back (&ready_queue[t->priority], &t->elem);
+  }
+
+
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -410,7 +438,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_push_back (&ready_queue[cur->priority], &cur->elem);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -592,10 +620,13 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void) 
 {
-  if (list_empty (&ready_list))
-    return idle_thread;
-  else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  for(int i = PRI_MAX; i >= PRI_MIN; i--){
+    if(!list_empty(ready_queue[i])){
+      return list_entry (list_pop_front (&ready_queue[i]), struct thread, elem);
+    }
+  }
+
+  return idle_thread;
 }
 
 /* Completes a thread switch by activating the new thread's page
