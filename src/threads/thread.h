@@ -117,11 +117,11 @@ struct thread
     int64_t time_wake;
     struct list_elem sleep_elem;
     
+    int recent_cpu;
+    int nice;
 
-#ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-#endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

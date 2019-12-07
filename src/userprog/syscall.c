@@ -38,6 +38,25 @@ void exit (int status) {
   cur->exit_status = status;
 
   printf("%s: exit(%d)\n", cur -> name, cur->exit_status);
+
+  struct file* f;
+  struct list_elem* e;
+  for (e = list_begin(&(cur->file_list)); e != list_end(&(cur->file_list)); )
+  {
+    f = list_entry(e, struct file, elem);
+    e = list_next(e);
+    close(f->fd);
+  }
+
+  struct thread* child;
+  for (e = list_begin(&(cur->child_list)); e != list_end(&(cur->child_list));)
+  {
+    child = list_entry(e, struct thread, child_elem);
+    e = list_next(e);
+    if (child->status != THREAD_DYING)
+      wait(child->tid);
+  }
+
   thread_exit();
 }
 
