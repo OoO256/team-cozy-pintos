@@ -93,10 +93,7 @@ timer_sleep (int64_t ticks)
 
   ASSERT (intr_get_level () == INTR_ON);
 
-  if (ticks == 0){
-    printf("[debug] tick is 0\n");
-  }
-  else
+  if (ticks > 0)
   {
     thread_sleep(start + ticks);
   }  
