@@ -126,6 +126,8 @@ thread_wake (int64_t now){
   */
 
 
+  enum intr_level l = intr_disable();
+
   while (!list_empty(&sleeping_list) 
   && list_entry(list_front(&sleeping_list), struct thread, sleep_elem)->time_wake <= now)
   {
@@ -135,38 +137,19 @@ thread_wake (int64_t now){
     thread_unblock(front);    
   }
   
+  intr_set_level(l);
 }
 
 void
 thread_aging(void){
-  if (thread_mlfqs){
-    int i;
-    for (i = PRI_MIN; i < PRI_MAX; i++)
-    {
-      struct list_elem *e;
-      for (e = list_begin(&ready_queue[i]); e != list_end(&ready_queue[i]);
-      e = list_next(e))
-      {
-        struct thread *t = list_entry (e, struct thread, elem);
-
-        t->priority ++;
-
-        list_remove(e);
-        list_push_back(&ready_queue[i+1], e);
-      }      
-    }
+  thread_current()->recent_cpu = float_add_int(thread_current()->recent_cpu, 1);
+  if (timer_ticks() % TIMER_FREQ == 0) {
+    update_load_avg_and_recent_cpu();
   }
-  else
-  {//족보
-    thread_current()->recent_cpu = float_add_int(thread_current()->recent_cpu, 1);
-    if (timer_ticks() % TIMER_FREQ == 0) {
-      update_load_avg_and_recent_cpu();
-    }
-    if (timer_ticks() % 4 == 0) {
-      update_priority();
-    }
-  }  
-  //족보
+  if (timer_ticks() % 4 == 0) {
+    update_priority();
+  }
+  // 족보
 }
 
 
@@ -246,8 +229,8 @@ thread_tick (void)
     
 
   thread_wake(timer_ticks ());
-  if(thread_prior_aging == true);
-    //thread_aging();
+  if(thread_prior_aging == true)
+    thread_aging();
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -558,15 +541,21 @@ thread_get_recent_cpu (void)
 int max_priority() {
   int priority = -1;
   struct thread* t;
-  if(list_end(&ready_list) != NULL){
-    t = list_entry(list_end(&ready_list), struct thread, elem);
-    priority = t->priority;
+  if (thread_mlfqs){
+    int i;
+    for (i = PRI_MAX; i >= PRI_MIN; i++){
+      if (!list_empty(&ready_queue[i]))
+        return i;
+    }
   }
-  /*
-  if (!list_empty(&ready_list)) {
-      t = list_entry(list_front(&ready_list), struct thread, elem);
+  else
+  {    
+    if(list_empty(&ready_list) == false){
+      t = list_entry(list_back(&ready_list), struct thread, elem);
       priority = t->priority;
-  }*/
+    }
+  }
+  
   return priority;
 }
 
